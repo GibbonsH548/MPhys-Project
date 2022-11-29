@@ -111,50 +111,46 @@ def V_rep_dx(R):
 
 
     final = np.array([dist_vect[:,:,i]*total_dist_14 for i in range(3)])
+    V_rep_dx = np.sum(final,axis = 1).transpose().flatten()
 
-    final = np.sum(final,axis = 1).transpose().flatten()
-
-    return -12*final
+    return -12*V_rep_dx
 
 def V_dd_dx(R):
-    #R = np.array(np.split(x0,len(x0)/3)).astype(np.float)
-    dist = R[np.newaxis, :, :] - R[:, np.newaxis, :]
+    """ Returns an array of the derivatives of the dipolar interaction potential energy term for the system with respect to each parameter (ie [d/dx1,d/dy1,d/dz1,...,d/dxN,d/dyN,d/dzN]V_rep])
+    Parameters  
+    ----------
+        R: 2D numpy array - shape (N,3)
+    """
+    dist_vect = R[np.newaxis, :, :] - R[:, np.newaxis, :]
 
     # p1 = (x_k-x_j)r_kj^(-5)
-    dist_2 = dist**2
+    dist_2 = dist_vect**2
     total_dist_5 = np.nan_to_num((np.sum(dist_2,axis = 2))**(-5/2), posinf= 0 )
+    p1 = np.sum(np.array([dist_vect[:,:,i]*total_dist_5 for i in range(3)]),axis = 1).flatten()
+    
+    # p2 = -5 * (x_k - x_j)(e dot r_kj)^2 * r_kj^-7
+    dist_vect = R[np.newaxis, :, :] - R[:, np.newaxis, :]
+    e_dot_dist = np.dot(dist_vect,e_i)
+    e_dot_dist_2 = e_dot_dist**2
+    total_dist_7 = np.nan_to_num((np.sum(dist_2,axis = 2))**(-7/2), posinf= 0 )
+    ed2_td7 = e_dot_dist_2*total_dist_7
+    p2 = -5*np.sum(np.array([dist_vect[:,:,i]*ed2_td7 for i in range(3)]),axis = 1).transpose().flatten()
 
-    p1 = np.sum(np.array([dist[:,:,i]*total_dist_5 for i in range(3)]),axis = 1).transpose().flatten()
+    # p3 = 2e_k*(e dot r_kj)* r_kj^-5
+    total_dist_5 = np.nan_to_num((np.sum(dist_2,axis = 2))**(-5/2), posinf= 0 )
+    ed_td5 = e_dot_dist*total_dist_5
+    p3 = 2*np.sum(np.array([e_i[i]*ed_td5 for i in range(3)]),axis = 1).transpose().flatten()
 
-    # p2 = 5*(x_k*x_j)*(e dot r_kj)^2*r_kj^-7 
-    total_dist_7 = (np.sum(dist_2,axis = 2))**(-7/2)
-    total_dist_7 = np.nan_to_num(total_dist_7, posinf= 0 )
-    E_dot_R_k = e_i*R # e dot r_k:
-    dist_er = (E_dot_R_k[np.newaxis, :, :] - E_dot_R_k[:, np.newaxis, :]) # e dot r_k - e dot r_j
-    dist_er2 = (np.sum(dist_er,axis = 2))**2
-
-    # print(total_dist_7)
-    # print(dist_er2)
-    new = total_dist_7*dist_er2
-    p2 = np.array([dist[:,:,i]*new for i in range(3)])
-    p2 = np.sum(p2,axis = 1).transpose().flatten()*-5
-    # print(p2)
-
-    y = (dist_er.transpose()*total_dist_5.transpose()).transpose()
-    # print(y)
-
-    x = np.sum(np.sum(y,axis = 1),axis = 1)
-    p3 = -2*np.multiply.outer(x,e_i).flatten()
-    #print(p3)
     V_dd_dx =  (p1+p2+p3)*(-(3*C_dd)/(4*np.pi))
-    # print(V_dd_dx)
     return V_dd_dx
 
-def V_trap_dx(x0):
-    N = len(x0)/3
-    W = np.array(trap_f_array_dx*int(N)).astype(np.float)
-    V_trap_dx = W*x0
-    #print(V_trap_dx)
+def V_trap_dx(R):
+    """ Returns an array of the derivatives of the trapping potential energy term for the system with respect to each parameter (ie [d/dx1,d/dy1,d/dz1,...,d/dxN,d/dyN,d/dzN]V_rep])
+    Parameters  
+    ----------
+        R: 2D numpy array - shape (N,3)
+    """
+    V_trap_dx = (trap_f_array_dx*R).flatten()
     return V_trap_dx
 
 def V_total_dx_array(x0):
