@@ -16,7 +16,7 @@ mu_0_i = 1.257*10**(-7)  # Vacuum permability ()
 mu_b_i = 9.27400968e-24  # Bohr magneton ()
 mu_m = 10*mu_b_i         # magnetic moment of particles
 
-e_i = np.array([0,0,1])  # Unit vector of dipole orientation
+e_i = np.array([0,0,1], dtype=np.float64)  # Unit vector of dipole orientation
 
 # trapping frequency: If w_p << w_z - pancake if w_p >> w_z - cigar
 w_p_i = 1               # axial trapping frequency
@@ -94,7 +94,8 @@ def V_total(x0):
 
 # Derivative Array:
 
-def V_rep_dx(R):
+@njit
+def V_rep_dx(dist_vect, dist_2):
     """ Returns an array of the derivatives of the repulsive potential energy term for the system with respect to each parameter (ie [d/dx1,d/dy1,d/dz1,...,d/dxN,d/dyN,d/dzN]V_rep])
     Parameters  
     ----------
@@ -103,40 +104,41 @@ def V_rep_dx(R):
 
     # array of distances between particles 
     # [[[x00,y00,z00],[x01,y01,z01]],[[x10,y10,z10],[x11,y11,z11]]]
-    dist_vect = R - R.reshape(R.shape[0], 1, 3) # Subtracts all particle postions from all others gives displacement vectors in a np array (np.newaxis increases the dimension of the array from 2 -> 3) 
 
-    # square of distances 3D
-    dist_2 = dist_vect**2
-    total_dist_14 = np.sum(dist_2,axis = 2)**-7
-    total_dist_14[np.isinf(total_dist_14)] = 0
+    dist_14 = np.sum(dist_2,axis = 2)
+    np.fill_diagonal(dist_14, 1)
+    total_dist_14=dist_14**-7
+    
+    np.fill_diagonal(total_dist_14, 0)
 
-    final = np.array([dist_vect[:,:,i]*total_dist_14 for i in range(3)])
-    V_rep_dx = np.sum(final,axis = 1).transpose().flatten()
+    final = dist_vect.transpose()*total_dist_14
+    V_rep_dx = np.sum(final,axis = 2).transpose().flatten()
 
     return -12*V_rep_dx
 
-def V_dd_dx(R):
+def V_dd_dx(dist_vect, dist_2):
     """ Returns an array of the derivatives of the dipolar interaction potential energy term for the system with respect to each parameter (ie [d/dx1,d/dy1,d/dz1,...,d/dxN,d/dyN,d/dzN]V_rep])
     Parameters  
     ----------
         R: 2D numpy array - shape (N,3)
     """
-    dist_vect = R - R.reshape(R.shape[0], 1, 3)
 
     # p1 = (x_k-x_j)r_kj^(-5)
-    dist_2 = dist_vect**2
-    total_dist_5 = np.nan_to_num((np.sum(dist_2,axis = 2))**(-5/2), posinf= 0 )
-    p1 = np.sum(np.array([dist_vect[:,:,i]*total_dist_5 for i in range(3)]),axis = 1).flatten()
+    total_dist_5 = np.sum(dist_2,axis = 2)**(-5/2)
+    np.fill_diagonal(total_dist_5, 0)
+    p1 = np.sum(dist_vect.transpose()*total_dist_5,axis = 2).flatten()
     
     # p2 = -5 * (x_k - x_j)(e dot r_kj)^2 * r_kj^-7
     e_dot_dist = np.dot(dist_vect,e_i)
     e_dot_dist_2 = e_dot_dist**2
-    total_dist_7 = np.nan_to_num((np.sum(dist_2,axis = 2))**(-7/2), posinf= 0 )
+    total_dist_7 = np.sum(dist_2,axis = 2)**(-7/2)
+    np.fill_diagonal(total_dist_7,0)
     ed2_td7 = e_dot_dist_2*total_dist_7
-    p2 = -5*np.sum(np.array([dist_vect[:,:,i]*ed2_td7 for i in range(3)]),axis = 1).transpose().flatten()
+    p2 = -5*np.sum(dist_vect.transpose()*ed2_td7,axis = 2).transpose().flatten()
 
     # p3 = 2e_k*(e dot r_kj)* r_kj^-5
-    total_dist_5 = np.nan_to_num((np.sum(dist_2,axis = 2))**(-5/2), posinf= 0 )
+    total_dist_5 = np.sum(dist_2,axis = 2)**(-5/2)
+    np.fill_diagonal(total_dist_5,0)
     ed_td5 = e_dot_dist*total_dist_5
     p3 = 2*np.sum(np.array([e_i[i]*ed_td5 for i in range(3)]),axis = 1).transpose().flatten()
 
@@ -155,5 +157,7 @@ def V_trap_dx(R):
 
 def V_total_dx_array(x0):
     R = np.reshape(x0, (x0.shape[0] // 3, 3))
-    V_dx_array = V_dd_dx(R)+V_rep_dx(R)+V_trap_dx(R)
+    dist_vect = R - R.reshape(R.shape[0], 1, 3) # Subtracts all particle postions from all others gives displacement vectors in a np array (np.newaxis increases the dimension of the array from 2 -> 3) 
+    dist_2 = dist_vect**2 # square of distances 3D
+    V_dx_array = V_dd_dx(dist_vect, dist_2)+V_rep_dx(dist_vect, dist_2)+V_trap_dx(R)
     return V_dx_array
