@@ -63,7 +63,7 @@ def V_dd(R):
 
     distance_array = sd.pdist(R)   # Array of distances between particles (for 3 particles [r12,r13,r23])
     V_dd_1 = np.sum(distance_array**-3) # Calulates the sum of all rij^-3
-    e_dot_rij_sqr_wz = np.tril(np.dot(dist_vect,e_i)**2).flatten() # Produces an array of the dot products or the dipolar unit vector with the diplacement between particles 
+    e_dot_rij_sqr_wz = np.tril(np.sum(dist_vect*e_i,axis=2)**2).flatten() # Produces an array of the dot products or the dipolar unit vector with the diplacement between particles 
     e_dot_rij_sqr = e_dot_rij_sqr_wz[e_dot_rij_sqr_wz!=0] # Removes the zeros from duplicates and rij where i = j (ie)
 
     V_dd_2 = np.dot(distance_array**-5,e_dot_rij_sqr) # Calculates the dot product of rij^-5 with (e dot rij)^2 which finds the total potential from all particles 
@@ -79,6 +79,7 @@ def V_repulsive(R):
     sp_result = sd.pdist(R)**(-12) # Array of distances between particle^-12 (for 3 particles [r12^-12,r13^-12,r23^-12])
     V_rep = np.sum(sp_result)
     return V_rep
+
 
 def V_total(x0):
     """ Calculates the total potential energy of a system of dipolar particles
@@ -106,16 +107,16 @@ def V_rep_dx(dist_vect, dist_2):
     # [[[x00,y00,z00],[x01,y01,z01]],[[x10,y10,z10],[x11,y11,z11]]]
 
     dist_14 = np.sum(dist_2,axis = 2)
+    
     np.fill_diagonal(dist_14, 1)
     total_dist_14=dist_14**-7
-    
     np.fill_diagonal(total_dist_14, 0)
 
     final = dist_vect.transpose()*total_dist_14
     V_rep_dx = np.sum(final,axis = 2).transpose().flatten()
-
     return -12*V_rep_dx
 
+@njit
 def V_dd_dx(dist_vect, dist_2):
     """ Returns an array of the derivatives of the dipolar interaction potential energy term for the system with respect to each parameter (ie [d/dx1,d/dy1,d/dz1,...,d/dxN,d/dyN,d/dzN]V_rep])
     Parameters  
@@ -129,7 +130,7 @@ def V_dd_dx(dist_vect, dist_2):
     p1 = np.sum(dist_vect.transpose()*total_dist_5,axis = 2).flatten()
     
     # p2 = -5 * (x_k - x_j)(e dot r_kj)^2 * r_kj^-7
-    e_dot_dist = np.dot(dist_vect,e_i)
+    e_dot_dist = np.sum(dist_vect*e_i,axis=2)
     e_dot_dist_2 = e_dot_dist**2
     total_dist_7 = np.sum(dist_2,axis = 2)**(-7/2)
     np.fill_diagonal(total_dist_7,0)
@@ -140,7 +141,10 @@ def V_dd_dx(dist_vect, dist_2):
     total_dist_5 = np.sum(dist_2,axis = 2)**(-5/2)
     np.fill_diagonal(total_dist_5,0)
     ed_td5 = e_dot_dist*total_dist_5
-    p3 = 2*np.sum(np.array([e_i[i]*ed_td5 for i in range(3)]),axis = 1).transpose().flatten()
+
+    C = np.repeat(e_i,ed_td5.shape[0]**2).reshape(3,ed_td5.shape[0],ed_td5.shape[0])*ed_td5
+
+    p3 = 2*np.sum(C,axis = 1).transpose().flatten()
 
     V_dd_dx =  (p1+p2+p3)*(-(3*C_dd)/(4*np.pi))
     return V_dd_dx
