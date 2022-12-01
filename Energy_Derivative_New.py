@@ -4,7 +4,7 @@ from scipy.spatial import distance as sd
 
 import warnings
 #suppress warnings (to stop printing divide by 0 error)
-warnings.filterwarnings('ignore')
+#warnings.filterwarnings('ignore')
 
 # hbar, M - atom, 1/w
 
@@ -27,7 +27,7 @@ w_z_i = 50          # radial trapping frequency
 kg = m_i**(-1)
 m = m_i*kg     # convert to mass = 1
 
-w_2_i = w_p_i**2 + w_z_i**2   # converting to w**2 = 1
+w_2_i = 2*w_p_i**2 + w_z_i**2   # converting to w**2 = 1
 
 Hz = (w_2_i**(-1/2))        # Converting Hz 
 w_p = w_p_i*Hz              # converting axial trapping frequency
@@ -43,7 +43,7 @@ trap_f_array = np.array([(w_p**2)*(m/2),(w_p**2)*(m/2),(w_z**2)*(m/2)])
 trap_f_array_dx = np.array([(w_p**2)*(m),(w_p**2)*(m),(w_z**2)*(m)])
 
 
-@njit
+
 def V_trap(R):   
     """ Calculates the trapping potential of the system
     Parameters  
@@ -107,7 +107,7 @@ def V_rep_dx(dist_vect, dist_2):
     # [[[x00,y00,z00],[x01,y01,z01]],[[x10,y10,z10],[x11,y11,z11]]]
 
     dist_14 = np.sum(dist_2,axis = 2)
-    
+
     np.fill_diagonal(dist_14, 1)
     total_dist_14=dist_14**-7
     np.fill_diagonal(total_dist_14, 0)
