@@ -43,7 +43,7 @@ trap_f_array = np.array([(w_p**2)*(m/2),(w_p**2)*(m/2),(w_z**2)*(m/2)])
 trap_f_array_dx = np.array([(w_p**2)*(m),(w_p**2)*(m),(w_z**2)*(m)])
 
 
-
+@njit
 def V_trap(R):   
     """ Calculates the trapping potential of the system
     Parameters  
@@ -53,7 +53,8 @@ def V_trap(R):
     V_trap = np.dot(trap_f_array,np.sum(np.square(R),axis = 0))    # dot product of trapping frequencies and sum of all x^2,y y^2, z^2
     return V_trap
 
-def V_dd(R):
+@njit
+def V_dd(R, distance_array):
     """ Calculates the potential energy of the system due to the dipole interactions between each particle
     Parameters
     ----------
@@ -61,7 +62,6 @@ def V_dd(R):
     """
     dist_vect = R - R.reshape(R.shape[0], 1, 3) # Subtracts all particle postions from all others gives displacement vectors in a np array (np.newaxis increases the dimension of the array from 2 -> 3) 
 
-    distance_array = sd.pdist(R)   # Array of distances between particles (for 3 particles [r12,r13,r23])
     V_dd_1 = np.sum(distance_array**-3) # Calulates the sum of all rij^-3
     e_dot_rij_sqr_wz = np.tril(np.sum(dist_vect*e_i,axis=2)**2).flatten() # Produces an array of the dot products or the dipolar unit vector with the diplacement between particles 
     e_dot_rij_sqr = e_dot_rij_sqr_wz[e_dot_rij_sqr_wz!=0] # Removes the zeros from duplicates and rij where i = j (ie)
@@ -70,13 +70,14 @@ def V_dd(R):
     V_dd = (C_dd/(4*np.pi))*(V_dd_1-3*V_dd_2) 
     return V_dd
 
-def V_repulsive(R):
+@njit
+def V_repulsive(distance_array):
     """ Calculates the potential energy of the system due to a r_ij^12 repulsive potential between each particle
     Parameters
     ----------
         R: 2D numpy array - shape (N,3)
     """
-    sp_result = sd.pdist(R)**(-12) # Array of distances between particle^-12 (for 3 particles [r12^-12,r13^-12,r23^-12])
+    sp_result = distance_array**(-12) # Array of distances between particle^-12 (for 3 particles [r12^-12,r13^-12,r23^-12])
     V_rep = np.sum(sp_result)
     return V_rep
 
@@ -89,7 +90,8 @@ def V_total(x0):
                            - [x1, y1, z1, ..., xN, yN, zN]
     """
     R = np.reshape(x0, (x0.shape[0] // 3, 3))  # Splitting x0 into a 2D np array - [[x1, y1, z1],...,[xN, yN, zN]]
-    V_tot = V_trap(R)+V_repulsive(R)+V_dd(R)   # Suming over all contributions to the overall potential energy
+    distance_array = sd.pdist(R)               # Array of distances between particles (for 3 particles [r12,r13,r23])
+    V_tot = V_trap(R)+V_repulsive(distance_array)+V_dd(R, distance_array)   # Suming over all contributions to the overall potential energy
     return V_tot
 
 
@@ -159,6 +161,7 @@ def V_trap_dx(R):
     V_trap_dx = (trap_f_array_dx*R).flatten()
     return V_trap_dx
 
+@njit
 def V_total_dx_array(x0):
     R = np.reshape(x0, (x0.shape[0] // 3, 3))
     dist_vect = R - R.reshape(R.shape[0], 1, 3) # Subtracts all particle postions from all others gives displacement vectors in a np array (np.newaxis increases the dimension of the array from 2 -> 3) 
