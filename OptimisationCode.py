@@ -74,7 +74,7 @@ if gs_output == "T":
 
     name = "Outputs/GroundStateCoordinatesforQMC/CoordinatesOfGroundState{}".format(N)
     filename = "%s.txt" % name
-    np.savetxt(filename,thearray,fmt= ['%1.16E','%d'], comments="")
+    np.savetxt(filename,thearray,fmt= ['%1.16E','%d'], comments="", delimiter="           ")
     # print(df_sorted)
     # print(df_sorted["positions"][0])
 
