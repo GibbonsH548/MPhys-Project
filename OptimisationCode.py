@@ -65,18 +65,15 @@ if gs_output == "T":
     array = df_sorted["positions"][0]
     ones = np.ones(len(array),dtype = object)[:,None]
     array2 = array.reshape(len(array),1)
-    # print(array2)
+
 
     thearray = np.concatenate((array2, ones),axis=1)#,dtype=object)
 
-    #print(thearray)
-    #print(gs_output)
 
     name = "Outputs/GroundStateCoordinatesforQMC/CoordinatesOfGroundState{}".format(N)
     filename = "%s.txt" % name
-    np.savetxt(filename,thearray,fmt= ['%1.16E','%d'], comments="", delimiter="           ")
-    # print(df_sorted)
-    # print(df_sorted["positions"][0])
+    np.savetxt(filename,thearray,fmt= ['%+1.16E','%d'], comments="", delimiter="           ")
+
 
 
 
