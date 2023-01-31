@@ -11,9 +11,9 @@ w_z = input["simulation_properties"]["trapping_frequency_z"]
 w_p = input["simulation_properties"]["trapping_frequency_transverse"]
 e = input["simulation_properties"]["dipole_unit_vector"]
 m = input["simulation_properties"]["mass"]
-H = input["simulation_properties"]["hard_wall_coefficient"]
+k = input["simulation_properties"]["wall_repulsion_coefficient"]
 rep_order = input["simulation_properties"]["order_repulsive_wall"] # e.g -6 or -12
-
+H = k
 e_i = np.array(e,dtype = float)  
 e_hat = e_i / np.linalg.norm(e_i) # Unit vector of dipole orientation
 
@@ -53,7 +53,7 @@ def V_repulsive(R):
         R: 2D numpy array - shape (N,3)
     """
     
-    sp_result = sd.pdist(R)**(rep_order) # Array of distances between particle^-12 (for 3 particles [r12^-12,r13^-12,r23^-12])
+    sp_result = sd.pdist(R)**(-rep_order) # Array of distances between particle^-12 (for 3 particles [r12^-12,r13^-12,r23^-12])
     V_rep = np.sum(sp_result)
     return H*V_rep
 
@@ -66,7 +66,7 @@ def V_total(x0):
                            - [x1, y1, z1, ..., xN, yN, zN]
     """
     R = np.array(np.split(x0,len(x0)/3), dtype=float)  # Splitting x0 into a 2D np array - [[x1, y1, z1],...,[xN, yN, zN]]
-    V_tot = V_trap(R) + V_repulsive(R)  + V_dd(R)   # Suming over all contributions to the overall potential energy
+    V_tot = V_trap(R)   + V_dd(R) + V_repulsive(R)  # Suming over all contributions to the overall potential energy
     return V_tot
 
 
@@ -98,7 +98,7 @@ def V_rep_dx(dist_vect, dist_2):
     final = X*total_dist_5
 
     V_rep_dx = np.sum(final,axis = 2).transpose().flatten()
-    return (rep_order)*H*V_rep_dx
+    return (-rep_order)*H*V_rep_dx
 
 
 def V_dd_dx(dist_vect, dist_2):
@@ -119,7 +119,7 @@ def V_dd_dx(dist_vect, dist_2):
     p1 = np.sum(final,axis = 2).transpose().flatten()
 
 
-    e_dot_dist = np.sum(dist_vect*e_hat,axis=2)
+    e_dot_dist = -np.sum(dist_vect*e_hat,axis=2)
     e_dot_dist_2 = e_dot_dist**2
     total_dist_7 = r_ij**(-7/2)
     np.fill_diagonal(total_dist_7,0)
@@ -142,5 +142,5 @@ def V_total_dx_array(x0):
     R = np.array(np.split(x0,len(x0)/3), dtype=float)
     dist_vect = R.reshape(R.shape[0], 1, 3) - R # Subtracts all particle postions from all others gives displacement vectors in a np array (np.newaxis increases the dimension of the array from 2 -> 3) 
     dist_2 = dist_vect**2 # square of distances 3D
-    V_dx_array = V_trap_dx(R) + V_rep_dx(dist_vect, dist_2) + V_dd_dx(dist_vect, dist_2)
+    V_dx_array = V_trap_dx(R)  + V_dd_dx(dist_vect, dist_2) + V_rep_dx(dist_vect, dist_2)
     return V_dx_array
