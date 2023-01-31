@@ -12,7 +12,7 @@ w_p = input["simulation_properties"]["trapping_frequency_transverse"]
 e = input["simulation_properties"]["dipole_unit_vector"]
 m = input["simulation_properties"]["mass"]
 k = input["simulation_properties"]["wall_repulsion_coefficient"]
-rep_order = input["simulation_properties"]["order_repulsive_wall"] # e.g -6 or -12
+rep_order = -input["simulation_properties"]["order_repulsive_wall"] # e.g -6 or -12
 H = k
 e_i = np.array(e,dtype = float)  
 e_hat = e_i / np.linalg.norm(e_i) # Unit vector of dipole orientation
@@ -53,7 +53,7 @@ def V_repulsive(R):
         R: 2D numpy array - shape (N,3)
     """
     
-    sp_result = sd.pdist(R)**(-rep_order) # Array of distances between particle^-12 (for 3 particles [r12^-12,r13^-12,r23^-12])
+    sp_result = sd.pdist(R)**(rep_order) # Array of distances between particle^-12 (for 3 particles [r12^-12,r13^-12,r23^-12])
     V_rep = np.sum(sp_result)
     return H*V_rep
 
@@ -98,7 +98,7 @@ def V_rep_dx(dist_vect, dist_2):
     final = X*total_dist_5
 
     V_rep_dx = np.sum(final,axis = 2).transpose().flatten()
-    return (-rep_order)*H*V_rep_dx
+    return (rep_order)*H*V_rep_dx
 
 
 def V_dd_dx(dist_vect, dist_2):
@@ -119,7 +119,7 @@ def V_dd_dx(dist_vect, dist_2):
     p1 = np.sum(final,axis = 2).transpose().flatten()
 
 
-    e_dot_dist = -np.sum(dist_vect*e_hat,axis=2)
+    e_dot_dist = np.sum(dist_vect*e_hat,axis=2)
     e_dot_dist_2 = e_dot_dist**2
     total_dist_7 = r_ij**(-7/2)
     np.fill_diagonal(total_dist_7,0)
