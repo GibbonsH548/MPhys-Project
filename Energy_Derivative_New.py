@@ -81,7 +81,7 @@ def V_total(x0):
 
     R = np.array(np.split(x0,len(x0)/3), dtype=float)  # Splitting x0 into a 2D np array - [[x1, y1, z1],...,[xN, yN, zN]]
 
-    V_tot = V_repulsive(R) + V_dd(R)  + V_dd(R)  # Sum of all potential terms
+    V_tot = V_repulsive(R) + V_dd(R)  + V_trap(R)  # Sum of all potential terms
     return V_tot
 
 
@@ -154,8 +154,9 @@ def V_dd_dx(dist_vect, dist_2):
 
 
 def V_total_dx_array(x0):
-    R = np.array(np.split(x0,len(x0)/3), dtype=float)
+    #R = np.reshape(x0, (x0.shape[0]//3, 3)) ### !!!!!! Check!
+    R = np.array(np.split(x0,len(x0)/3), dtype=float) # need to fix
     dist_vect = R.reshape(R.shape[0], 1, 3) - R # Subtracts all particle postions from all others gives displacement vectors in a np array (np.newaxis increases the dimension of the array from 2 -> 3) 
     dist_2 = dist_vect**2 # square of distances 3D
-    V_dx_array = V_trap_dx(R)   + V_rep_dx(dist_vect, dist_2)  #+ V_dd_dx(dist_vect, dist_2)
+    V_dx_array = V_trap_dx(R)   + V_rep_dx(dist_vect, dist_2)  + V_dd_dx(dist_vect, dist_2)
     return V_dx_array
