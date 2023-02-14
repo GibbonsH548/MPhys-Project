@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import numpy as np
 import pandas as pd
 from scipy import optimize
@@ -29,7 +31,7 @@ for i in range(it):
 
     position_min_test = np.concatenate([position_min_test, np.split(res.x,len(res.x)/3)])
     Test.loc[i] = [e, res.x]
-    #print(i)
+    print(i)
 
 if pd_output == "T":
     name = "Outputs/pd_outputs/DataframeFor{}Atoms_{}itterations".format(N,it)
@@ -72,7 +74,7 @@ if gs_output == "T":
 
     name = "Outputs/GroundStateCoordinatesforQMC/CoordinatesOfGroundState{}".format(N)
     filename = "%s.txt" % name
-    np.savetxt(filename,thearray,fmt= ['%+1.16E','%d'], comments="", delimiter="           ")
+    np.savetxt(filename,thearray,fmt= [' %+1.16E','%d'], comments="", delimiter="           ")
 
 
 
