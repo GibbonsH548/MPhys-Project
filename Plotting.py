@@ -1,13 +1,13 @@
+#!/usr/bin/env python
+
 import numpy as np 
 import pandas as pd
 import matplotlib.pyplot as plt
 
-df = pd.read_pickle("Outputs/10000_Iterations_pancake_001/cigar_14_atoms.pkl")#"Outputs/testdatatesting50_i.pkl")
-df_2 = pd.read_pickle("Outputs/20_6_i.pkl")
+df = pd.read_pickle("Outputs/pd_outputs/DataframeFor21Atoms_50itterations.pkl")#"Outputs/testdatatesting50_i.pkl")
 df_sorted = df.sort_values(by = "energy").reset_index()
 df_sorted = df_sorted.drop("index",axis = 1)
-df2_sorted = df_2.sort_values(by = "energy").reset_index()
-df2_sorted = df2_sorted.drop("index",axis = 1)
+print(df_sorted["positions"][1])
 
 def PlotScatter(df_sorted, e_min_index, e_max_index, size):
     x1 = []
@@ -27,8 +27,12 @@ def PlotScatter(df_sorted, e_min_index, e_max_index, size):
     plt.ylabel("y")
     plt.show()
     plt.scatter(x1, z1, s = 1)
+    plt.xlabel("x")
+    plt.ylabel("z")
     plt.show()
     plt.scatter(y1, z1, s = 1)
+    plt.xlabel("y")
+    plt.ylabel("z")
     plt.show()
 
 def Plot_Energy_vs_Index(df_sorted, x_min, x_max):
@@ -67,23 +71,16 @@ def SaveBasins(name, df_sorted):
     np.savetxt(f"Outputs/{name}.txt", d, fmt = "%s")
 
 # SaveBasins("20_atoms", df_sorted)
-Plot_Energy_vs_Index(df_sorted, 3, 40)
+Plot_Energy_vs_Index(df_sorted, 0, 49)
 plt.show()
-PlotScatter(df_sorted, 0, 1, 1)
+# ot_Energy_vs_Index(df_sorted, 0, 170)
+# plt.show()
+# PlotScatter(df_sorted, 0, 19, 1)
+# PlotScatter(df_sorted, 197, 198, 1)
+# PlotScatter(df_sorted, 198, 199, 1)
+#PlotScatter(df_sorted, 0, 950, 0.1)
+#PlotScatter(df_sorted, 0, 100, 0.1)
+PlotScatter(df_sorted, 0, 100, 0.5)
+# PlotScatter(df_sorted, 800, 900, 0.5)
+# PlotScatter(df_sorted, 998, 999, 5)
 plt.show()
-# for i in range 
-# df_new = df_sorted.round(decimals = 10)
-# N_basins = df_new["energy"].nunique()
-# print(N_basins)
-# # Plot_Energy_vs_Index(df_sorted, 0, len(df_new))
-# df_reduced = df_new.drop_duplicates(subset=["energy"], keep = "first").reset_index()
-# # print(df_reduced)
-# # Plot_Energy_vs_Index_n(df_reduced, 0, len(df_reduced))
-# # plt.show()
-# df_red = df_reduced.drop(columns = ["index","energy"])
-# d = df_red.to_numpy()
-# d = np.insert(d,0,N_basins)
-# print(d)
-# np.savetxt("Outputs/20_atoms.txt", d, fmt = "%s")
-#PlotScatter(df_sorted, df2_sorted, 0, 1, 10)
-#print(len(df_sorted))
