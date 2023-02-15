@@ -22,15 +22,12 @@ for i in range(it):
     Z = rng.normal(loc = 0, scale = 1, size = N) # N positions of coordinates in z cartesian directions
     x0 = np.array([X,Y,Z]).transpose().flatten() # setting it to [x1, y1, z1,... , xN, yN, zN]
 
-    res = optimize.minimize(EDF.V_total, x0, method="bfgs", jac=EDF.V_total_dx_array, options = {'gtol':1e-100000})  # , jac = "3-point" - numerical approximation
+    res = optimize.minimize(EDF.V_total, x0, method="bfgs", jac= EDF.V_total_dx_array, options = {'gtol':1e-100000})  # , jac = "3-point" - numerical approximation
     e = EDF.V_total(res.x)
 
     if i == 0:
-        position_min_test = np.split(res.x,len(res.x)/3)
         Test = pd.DataFrame({"energy": [e], "positions": [res.x]})
-
-    position_min_test = np.concatenate([position_min_test, np.split(res.x,len(res.x)/3)])
-    Test.loc[i] = [e, res.x]
+    Test.loc[i] = np.array([e, res.x],dtype = object)
     print(i)
 
 if pd_output == "T":
