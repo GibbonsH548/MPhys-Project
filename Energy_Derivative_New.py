@@ -5,17 +5,31 @@ from scipy.spatial import distance as sd
 import tomli
 
 with open("input.toml", "rb") as f:
-    input = tomli.load(f)
+    variables = tomli.load(f)
 
-C_dd = input["simulation_properties"]["dipole_moment"]   # Cdd/4pi
-w_z = input["simulation_properties"]["trapping_frequency_z"]
-w_p = input["simulation_properties"]["trapping_frequency_transverse"]
-e = input["simulation_properties"]["dipole_unit_vector"]
-m = input["simulation_properties"]["mass"]
-k = input["simulation_properties"]["wall_repulsion_coefficient"]
-rep_order = -input["simulation_properties"]["order_repulsive_wall"] # e.g -6 or -12
-H = k
-e_i = np.array(e,dtype = float)  
+C_dd = variables["simulation_properties"]["dipole_moment"]   # sqrt(Cdd/4pi)
+w_z = variables["simulation_properties"]["trapping_frequency_z"]
+w_p = variables["simulation_properties"]["trapping_frequency_transverse"]
+e = variables["simulation_properties"]["dipole_direction_vector"]
+m = variables["simulation_properties"]["mass"]
+c_6 = variables["simulation_properties"]["wall_repulsion_coefficient"]
+rep_order = -variables["simulation_properties"]["order_repulsive_wall"] # e.g -6 or -12
+e_i = np.array(e,dtype = float)
+
+# Trapping errors of input variables:
+if e_i.any() == np.array([0.0,0.0,0.0]).any():
+    raise ValueError("magnitude of the dipole_direction_vector cannot equal 0" )
+if C_dd < 0:
+    raise ValueError("dipole moment must be positive")
+if w_z < 0:
+    raise ValueError("trapping_frequency_z must be positive")
+if w_p < 0:
+    raise ValueError("trapping_frequency_transverse must be positive")
+if rep_order> 0:
+    raise ValueError("order_repulsive_wall mus be positive (e.g 6 or 12)")
+if m< 0 :
+    raise ValueError("mass must be positive")
+
 e_hat = e_i / np.linalg.norm(e_i) # Unit vector of dipole orientation
 
 trap_f_array = np.array([(w_p**2)*(m/2),(w_p**2)*(m/2),(w_z**2)*(m/2)])
@@ -43,17 +57,17 @@ def V_dd(R):
     r_ij = np.sum(dist_2,axis = 2) # converts to 2D np array  - sums the differences between particles in x y and z diresction [(x_1-x_2)^2, (y_1-y_2)^2, (z_1-z_2)^2]  ->  (x_1-x_2)^2 + (y_1-y_2)^2 + (z_1-z_2)^2 
 
     np.fill_diagonal(r_ij, 1) # adds 1's to diagonal to avoid divide by 0 errors
-    total_dist_3=r_ij**(-3/2)  # calculates |r_ij|^-3 for each combination of i and j
+    total_dist_3=r_ij**(-1.5)  # calculates |r_ij|^-3 for each combination of i and j
     np.fill_diagonal(total_dist_3, 0) # changes 1's on diagonals back to 0's (diagonal is r_11 etc. always 0)  
 
-    V_dd_1 = np.sum(total_dist_3)/2 # Calulates the sum of all rij^-3 and divides by 2 to avoid double counting 
+    V_dd_1 = np.sum(total_dist_3)*0.5 # Calulates the sum of all rij^-3 and divides by 2 to avoid double counting 
 
 
     total_dist_5=r_ij**(-5/2) # calculates |r_ij|^-5 for each combination of i and j
     np.fill_diagonal(total_dist_5, 0) # changes 1's on diagonals back to 0's (diagonal is r_11 etc. always 0)  
     dis_e = np.sum(dist_vect*e_hat, axis = 2)**2 # square of e_hat dot r_ij
     # print(dist_vect*e_hat)
-    V_dd_2 = (np.sum(dis_e*total_dist_5)/2) # sum of all the previous terms divide by 2 to stop double counting
+    V_dd_2 = (np.sum(dis_e*total_dist_5)*0.5) # sum of all the previous terms divide by 2 to stop double counting
 
     V_dd = (C_dd**2)*(V_dd_1-3*V_dd_2) 
     
@@ -68,7 +82,7 @@ def V_repulsive(R):
     
     sp_result = sd.pdist(R)**(rep_order) # Array of distances between particle^-12 (for 3 particles [r12^-12,r13^-12,r23^-12])
     V_rep = np.sum(sp_result)
-    return H*V_rep
+    return c_6*V_rep
 
 
 def V_total(x0):
@@ -111,14 +125,14 @@ def V_rep_dx(dist_vect, r_ij):
 
 
     np.fill_diagonal(r_ij, 1) # adds 1's to diagonal to avoid divide by 0 errors
-    total_dist_5=r_ij**((rep_order-2)/2) # calculates |r_ij|^-rep for each combination of i and j
+    total_dist_5=r_ij**((rep_order-2)*0.5) # calculates |r_ij|^-rep for each combination of i and j
     np.fill_diagonal(total_dist_5, 0) # changes 1's on diagonals back to 0's (diagonal is r_11 etc. always 0)
 
     X = dist_vect.transpose().transpose((0,2,1))  # Converting to a 3d np array (3, N, N) with [[x diplacements (NxN)], [y displacements (NxN)], [z displacements (NxN)]]
     final = X*total_dist_5  # Each of 2x2 displacement arrays * arrays of r_ij^-5 
 
     V_rep_dx = np.sum(final,axis = 2).transpose().flatten()  
-    return (rep_order)*H*V_rep_dx
+    return (rep_order)*c_6*V_rep_dx
 
 
 def V_dd_dx(dist_vect, r_ij):
@@ -135,7 +149,7 @@ def V_dd_dx(dist_vect, r_ij):
     """
 
     np.fill_diagonal(r_ij, 1) # adds 1's to diagonal to avoid divide by 0 errors
-    total_dist_5=r_ij**(-5/2)
+    total_dist_5=r_ij**(-2.5)
     np.fill_diagonal(total_dist_5, 0) # changes 1's on diagonals back to 0's (diagonal is r_11 etc. always 0)
 
     X = dist_vect.transpose().transpose((0,2,1)) # Converting to a 3d np array (3, N, N) with [[x diplacements (NxN)], [y displacements (NxN)], [z displacements (NxN)]]
@@ -145,7 +159,7 @@ def V_dd_dx(dist_vect, r_ij):
 
     e_dot_dist = np.sum(dist_vect*e_hat,axis=2)
     e_dot_dist_2 = e_dot_dist**2
-    total_dist_7 = r_ij**(-7/2)
+    total_dist_7 = r_ij**(-3.5)
 
     np.fill_diagonal(total_dist_7,0) # changes 1's on diagonals back to 0's (diagonal is r_11 etc. always 0)
     ed2_td7 = e_dot_dist_2*total_dist_7
